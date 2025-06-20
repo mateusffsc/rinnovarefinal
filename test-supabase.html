@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Supabase Integration</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin: 5px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        button:hover { 
+            background: #0056b3; 
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status { 
+            margin-top: 15px; 
+            padding: 15px; 
+            border-radius: 6px; 
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .results {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+        .lead-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        h1 {
+            text-align: center;
+            color: #343a40;
+            margin-bottom: 30px;
+        }
+        .header-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste de Integração Supabase</h1>
+        
+        <div class="header-info">
+            <strong>Sistema Rinnovare - Avaliação Dental</strong><br>
+            <small>Testando conexão e funcionalidades do banco de dados</small>
+        </div>
+        
+        <!-- Teste de Conexão -->
+        <div class="test-section">
+            <h3>🔗 Teste de Conexão</h3>
+            <p>Verifica se conseguimos conectar ao Supabase.</p>
+            <button onclick="testConnection()">Testar Conexão</button>
+            <div id="connection-status"></div>
+        </div>
+
+        <!-- Teste de Inserção -->
+        <div class="test-section">
+            <h3>📥 Teste de Inserção de Lead</h3>
+            <p>Insere um lead de teste no banco de dados.</p>
+            <button onclick="testInsert()">Inserir Lead de Teste</button>
+            <div id="insert-status"></div>
+        </div>
+
+        <!-- Teste de Busca -->
+        <div class="test-section">
+            <h3>📤 Teste de Busca de Leads</h3>
+            <p>Busca todos os leads salvos no banco.</p>
+            <button onclick="testFetch()">Buscar Todos os Leads</button>
+            <div id="fetch-status"></div>
+            <div id="leads-results"></div>
+        </div>
+
+        <!-- Teste de Estatísticas -->
+        <div class="test-section">
+            <h3>📊 Teste de Estatísticas</h3>
+            <p>Busca estatísticas gerais do sistema.</p>
+            <button onclick="testStats()">Buscar Estatísticas</button>
+            <div id="stats-status"></div>
+        </div>
+
+        <!-- Informações das Tabelas -->
+        <div class="test-section">
+            <h3>🗃️ Estrutura do Banco</h3>
+            <p><strong>Tabelas criadas:</strong></p>
+            <ul>
+                <li><strong>leads</strong> - Dados principais dos pacientes</li>
+                <li><strong>lead_scores</strong> - Scores por categoria</li>
+                <li><strong>lead_answers</strong> - Respostas do questionário</li>
+                <li><strong>treatments</strong> - Catálogo de tratamentos</li>
+                <li><strong>leads_complete</strong> - View com dados completos</li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+        
+        const supabaseUrl = 'https://lhjgkxvbohtuhvmchjys.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoamdreHZib2h0dWh2bWNoanlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyODQ5ODgsImV4cCI6MjA2NTg2MDk4OH0.L6QPIXA0Brx-A4P4PDOxCGfMyKQ_TF0Aibuy_EkuWfA';
+        
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        window.supabase = supabase;
+        
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        window.testConnection = async function() {
+            showStatus('connection-status', '🔄 Testando conexão...', 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('treatments')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) throw error;
+                
+                showStatus('connection-status', '✅ Conexão estabelecida com sucesso!\n\nSupabase está funcionando corretamente.', 'success');
+            } catch (error) {
+                showStatus('connection-status', `❌ Erro de conexão:\n\n${error.message}`, 'error');
+            }
+        };
+        
+        window.testInsert = async function() {
+            showStatus('insert-status', '🔄 Inserindo lead de teste...', 'info');
+            
+            try {
+                const testId = `test_${Date.now()}`;
+                const now = new Date().toISOString();
+                
+                // Inserir lead principal
+                const { data: lead, error: leadError } = await supabase
+                    .from('leads')
+                    .insert({
+                        id: testId,
+                        name: 'João Teste Silva',
+                        phone: '(31) 99999-9999',
+                        weight: '70',
+                        height: '175',
+                        imc: '22.9',
+                        supplement: 'Avaliação Odontológica Completa',
+                        status: 'teste',
+                        diagnosis: 'sensibilidade dental moderada, necessidade de avaliação preventiva',
+                        total_score: 7,
+                        created_at: now
+                    })
+                    .select()
+                    .single();
+                
+                if (leadError) throw leadError;
+                
+                // Inserir scores
+                const scoreInserts = [
+                    { lead_id: testId, category: 'sensibilidade', score: 3 },
+                    { lead_id: testId, category: 'prevencao', score: 2 },
+                    { lead_id: testId, category: 'higiene', score: 1 },
+                    { lead_id: testId, category: 'estetica', score: 1 }
+                ];
+                
+                const { error: scoresError } = await supabase
+                    .from('lead_scores')
+                    .insert(scoreInserts);
+                
+                if (scoresError) throw scoresError;
+                
+                // Inserir respostas
+                const answerInserts = [
+                    { lead_id: testId, question_id: 1, answer_index: 1, answer_text: 'Ocasionalmente sinto desconforto' },
+                    { lead_id: testId, question_id: 4, answer_index: 1, answer_text: 'Sensibilidade moderada' }
+                ];
+                
+                const { error: answersError } = await supabase
+                    .from('lead_answers')
+                    .insert(answerInserts);
+                
+                if (answersError) throw answersError;
+                
+                showStatus('insert-status', `✅ Lead inserido com sucesso!\n\nID: ${testId}\nNome: ${lead.name}\nTelefone: ${lead.phone}\nDiagnóstico: ${lead.diagnosis}`, 'success');
+                
+            } catch (error) {
+                showStatus('insert-status', `❌ Erro ao inserir lead:\n\n${error.message}`, 'error');
+            }
+        };
+        
+        window.testFetch = async function() {
+            showStatus('fetch-status', '🔄 Buscando leads...', 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('leads_complete')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+                
+                if (error) throw error;
+                
+                showStatus('fetch-status', `✅ Encontrados ${data.length} leads`, 'success');
+                
+                const resultsDiv = document.getElementById('leads-results');
+                if (data.length > 0) {
+                    const leadsHtml = data.map(lead => `
+                        <div class="lead-item">
+                            <strong>${lead.name}</strong> - ${lead.phone}<br>
+                            <small>Status: ${lead.status} | Suplemento: ${lead.supplement}</small><br>
+                            <small>Data: ${new Date(lead.created_at).toLocaleString('pt-BR')}</small><br>
+                            <small>Scores: ${JSON.stringify(lead.scores || {})}</small>
+                        </div>
+                    `).join('');
+                    
+                    resultsDiv.innerHTML = `<div class="results"><h4>📋 Leads Encontrados:</h4>${leadsHtml}</div>`;
+                } else {
+                    resultsDiv.innerHTML = '<div class="results">Nenhum lead encontrado.</div>';
+                }
+                
+            } catch (error) {
+                showStatus('fetch-status', `❌ Erro ao buscar leads:\n\n${error.message}`, 'error');
+            }
+        };
+        
+        window.testStats = async function() {
+            showStatus('stats-status', '🔄 Buscando estatísticas...', 'info');
+            
+            try {
+                // Total de leads
+                const { count: totalLeads, error: countError } = await supabase
+                    .from('leads')
+                    .select('*', { count: 'exact', head: true });
+                
+                if (countError) throw countError;
+                
+                // Leads de hoje
+                const today = new Date().toISOString().split('T')[0];
+                const { count: todayCount, error: todayError } = await supabase
+                    .from('leads')
+                    .select('*', { count: 'exact', head: true })
+                    .gte('created_at', `${today}T00:00:00`)
+                    .lte('created_at', `${today}T23:59:59`);
+                
+                if (todayError) throw todayError;
+                
+                // Tratamentos mais recomendados
+                const { data: supplementData, error: supplementError } = await supabase
+                    .from('leads')
+                    .select('supplement')
+                    .neq('supplement', null);
+                
+                if (supplementError) throw supplementError;
+                
+                const supplementCounts = supplementData.reduce((acc, item) => {
+                    acc[item.supplement] = (acc[item.supplement] || 0) + 1;
+                    return acc;
+                }, {});
+                
+                const statsText = `
+📊 ESTATÍSTICAS DO SISTEMA:
+
+📈 Total de Leads: ${totalLeads || 0}
+📅 Leads Hoje: ${todayCount || 0}
+🏆 Tratamentos Recomendados:
+${Object.entries(supplementCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([supp, count]) => `   • ${supp}: ${count}`)
+    .join('\n')}
+
+✅ Sistema funcionando corretamente!
+                `;
+                
+                showStatus('stats-status', statsText, 'success');
+                
+            } catch (error) {
+                showStatus('stats-status', `❌ Erro ao buscar estatísticas:\n\n${error.message}`, 'error');
+            }
+        };
+        
+        // Auto-teste de conexão
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🧪 Página de teste carregada');
+            console.log('🔗 Supabase URL:', supabaseUrl);
+        });
+    </script>
+</body>
+</html> 
